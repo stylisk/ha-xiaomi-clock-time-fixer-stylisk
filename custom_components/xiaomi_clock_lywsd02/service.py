@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import ast
+import asyncio
+from collections.abc import Callable
 import logging
 import struct
 
@@ -13,6 +15,12 @@ from .ble_client import write_time_to_device
 from .helpers import get_localized_timestamp, get_tz_offset
 
 _LOGGER = logging.getLogger(__name__)
+
+DEFAULT_TIMEOUT = 60
+MIN_TIMEOUT = 5
+MAX_TIMEOUT = 120
+
+TimePayloadFactory = Callable[[], tuple[bytes, int]]
 
 
 def _resolve_macs(hass: HomeAssistant, call: ServiceCall) -> set[str]:
@@ -49,10 +57,27 @@ def _resolve_macs(hass: HomeAssistant, call: ServiceCall) -> set[str]:
     return target_macs
 
 
-def _build_payloads(call: ServiceCall, timestamp: int, tz_offset: int):
-    """Build GATT byte payloads from service call data."""
-    data = struct.pack('<Ib', timestamp, tz_offset)
+def _build_time_payload(timestamp: int, tz_offset: int) -> bytes:
+    """Build the GATT byte payload that sets the clock time."""
+    return struct.pack('<Ib', timestamp, tz_offset)
 
+
+def _make_time_payload_factory(
+    timestamp: int | None,
+    tz_offset: int,
+) -> TimePayloadFactory:
+    """Create a factory that builds the time payload as late as possible."""
+    def _factory() -> tuple[bytes, int]:
+        timestamp_to_write = (
+            get_localized_timestamp() if timestamp is None else timestamp
+        )
+        return _build_time_payload(timestamp_to_write, tz_offset), timestamp_to_write
+
+    return _factory
+
+
+def _build_settings_payloads(call: ServiceCall):
+    """Build optional GATT byte payloads from service call data."""
     data_temp_mode = None
     temo = str(call.data.get('temp_mode', '') or "x").replace('[', '').replace(']', '').replace("'", "").replace('"', '').strip().upper()
     if temo in ('C', 'F'):
@@ -68,7 +93,25 @@ def _build_payloads(call: ServiceCall, timestamp: int, tz_offset: int):
     except ValueError:
         pass
 
-    return data, data_temp_mode, data_clock_mode
+    return data_temp_mode, data_clock_mode
+
+
+def _get_timeout(call: ServiceCall) -> int:
+    """Extract and validate the per-device timeout from service call data."""
+    raw_timeout = call.data.get('timeout', DEFAULT_TIMEOUT)
+    try:
+        timeout = int(raw_timeout)
+    except (TypeError, ValueError) as exc:
+        raise HomeAssistantError(
+            f"Invalid timeout '{raw_timeout}'. Expected seconds as an integer."
+        ) from exc
+
+    if timeout < MIN_TIMEOUT or timeout > MAX_TIMEOUT:
+        raise HomeAssistantError(
+            f"Invalid timeout '{timeout}'. Expected {MIN_TIMEOUT}-{MAX_TIMEOUT} seconds."
+        )
+
+    return timeout
 
 
 async def handle_set_time(hass: HomeAssistant, call: ServiceCall) -> None:
@@ -86,18 +129,34 @@ async def handle_set_time(hass: HomeAssistant, call: ServiceCall) -> None:
     tz_offset = get_tz_offset() if tz_offset is None else int(tz_offset)
 
     timestamp = call.data.get('timestamp')
-    timestamp = get_localized_timestamp() if timestamp is None else int(timestamp)
+    timestamp = None if timestamp is None else int(timestamp)
+    timeout = _get_timeout(call)
 
-    data, data_temp_mode, data_clock_mode = _build_payloads(call, timestamp, tz_offset)
+    time_payload_factory = _make_time_payload_factory(timestamp, tz_offset)
+    data_temp_mode, data_clock_mode = _build_settings_payloads(call)
 
     errors = []
     successes = 0
 
     for mac in macs:
         try:
-            await write_time_to_device(hass, mac, data, data_temp_mode, data_clock_mode)
-            _LOGGER.info(f"Done - refreshed time on '{mac}' to '{timestamp}' with offset of '{tz_offset}' hours.")
+            async with asyncio.timeout(timeout):
+                timestamp_written = await write_time_to_device(
+                    hass,
+                    mac,
+                    time_payload_factory,
+                    data_temp_mode,
+                    data_clock_mode,
+                )
+            _LOGGER.info(
+                f"Done - refreshed time on '{mac}' to '{timestamp_written}' "
+                f"with offset of '{tz_offset}' hours."
+            )
             successes += 1
+        except TimeoutError:
+            err_msg = f"Timed out updating {mac} after {timeout} seconds"
+            _LOGGER.error(err_msg)
+            errors.append(err_msg)
         except HomeAssistantError as e:
             _LOGGER.error(str(e))
             errors.append(str(e))

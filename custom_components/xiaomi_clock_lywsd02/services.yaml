@@ -59,7 +59,7 @@ set_time:
               value: '24'
     timeout:
       name: Connection Timeout
-      description: Allowed connection timeout in seconds.
+      description: Per-device maximum seconds for the whole BLE update attempt.
       default: 60
       required: false
       selector:

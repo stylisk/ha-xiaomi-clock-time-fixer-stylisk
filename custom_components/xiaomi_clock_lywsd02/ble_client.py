@@ -1,6 +1,7 @@
 """BLE connection and GATT write logic for Xiaomi Clock Time Fixer."""
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 
 from bleak_retry_connector import establish_connection, BleakClientWithServiceCache
@@ -13,14 +14,16 @@ _LOGGER = logging.getLogger(__name__)
 _UUID_TIME = 'EBE0CCB7-7A0A-4B0C-8A1A-6FF2997DA3A6'
 _UUID_TEMO = 'EBE0CCBE-7A0A-4B0C-8A1A-6FF2997DA3A6'
 
+TimePayloadFactory = Callable[[], tuple[bytes, int]]
+
 
 async def write_time_to_device(
     hass: HomeAssistant,
     mac: str,
-    data: bytes,
+    time_payload_factory: TimePayloadFactory,
     data_temp_mode: bytes | None = None,
     data_clock_mode: bytes | None = None,
-) -> None:
+) -> int:
     """Connect to a BLE device and write time/settings via GATT.
 
     Raises HomeAssistantError if the device cannot be found or communication fails.
@@ -44,7 +47,8 @@ async def write_time_to_device(
         raise HomeAssistantError(f"Failed to connect to device {mac} (Timeout or rejection)")
 
     try:
-        await client.write_gatt_char(_UUID_TIME, data)
+        data_time, timestamp = time_payload_factory()
+        await client.write_gatt_char(_UUID_TIME, data_time)
         if data_temp_mode is not None:
             await client.write_gatt_char(_UUID_TEMO, data_temp_mode)
         if data_clock_mode is not None:
@@ -56,5 +60,6 @@ async def write_time_to_device(
                 _LOGGER.warning(
                     f"Clock format could not be set on '{mac}' (device may not support it): {e}"
                 )
+        return timestamp
     finally:
         await client.disconnect()

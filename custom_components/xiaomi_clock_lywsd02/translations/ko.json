@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Xiaomi Clock Time Fixer",
+        "title": "Xiaomi Clock Time Fixer (Stylisk Fork)",
         "description": "Xiaomi LYWSD02 시간 업데이트 통합 구성요소를 설정하시겠습니까?\n설정이 완료되면 'xiaomi_clock_lywsd02.set_time' 동작을 사용해 시간을 맞출 수 있습니다."
       }
     },

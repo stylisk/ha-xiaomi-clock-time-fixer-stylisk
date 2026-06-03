@@ -1,8 +1,8 @@
 {
   "domain": "xiaomi_clock_lywsd02",
-  "name": "Xiaomi Clock Time Fixer",
-  "version": "1.1.0",
-  "documentation": "https://github.com/kkqq9320/ha-xiaomi-clock-time-fixer/blob/main/README.md",
+  "name": "Xiaomi Clock Time Fixer (Stylisk Fork)",
+  "version": "1.1.1",
+  "documentation": "https://github.com/stylisk/ha-xiaomi-clock-time-fixer-stylisk/blob/main/README.md",
   "dependencies": [
     "bluetooth"
   ],
@@ -12,9 +12,9 @@
     "voluptuous"
   ],
   "codeowners": [
-    "@kkqq9320"
+    "@stylisk"
   ],
   "config_flow": true,
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/kkqq9320/ha-xiaomi-clock-time-fixer/issues"
+  "issue_tracker": "https://github.com/stylisk/ha-xiaomi-clock-time-fixer-stylisk/issues"
 }

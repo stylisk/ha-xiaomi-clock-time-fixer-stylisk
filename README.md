@@ -1,8 +1,12 @@
-# Xiaomi Clock Time Fixer for Home Assistant
+# Xiaomi Clock Time Fixer for Home Assistant (Stylisk Fork)
 
 ![HACS Valid](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)
 
+This is the Stylisk-maintained fork of
+[kkqq9320/ha-xiaomi-clock-time-fixer](https://github.com/kkqq9320/ha-xiaomi-clock-time-fixer).
+Use this repository for the local Home Assistant installation and future updates.
+Keep the upstream repository only as the source to compare or pull changes from.
 
 
 ![0d9dea62454842cae2c0d818d4be3b9d](https://github.com/user-attachments/assets/e0c59538-ff41-49ef-b23e-5ddfac4acfd7)
@@ -14,6 +18,8 @@ This integration solves common Bluetooth device communication errors (like the E
 
 ## Features
 - **Accurate Time Synchronization**: Syncs your clock flawlessly with Home Assistant's local time (or a custom timestamp).
+- **Real timeout handling**: The `timeout` action field now limits each device update attempt instead of being UI-only metadata.
+- **Late timestamp generation**: When no custom timestamp is provided, the timestamp is generated after BLE connection succeeds, immediately before writing to the clock.
 - **Timezone Offset Support**: Corrects timezone display issues (supports standard int hour offsets like +9 for KST).
 - **Bulk Updating**: Easily update settings across multiple clocks at once.
 - **Home Assistant Device Support**: Choose your clock directly from a UI dropdown if it's already integrated via the `xiaomi_ble` integration.
@@ -30,7 +36,7 @@ Before using this integration, ensure your Home Assistant server has Bluetooth c
 ## Installation
 
 ### Method 1: HACS (Recommended)
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kkqq9320&repository=ha-xiaomi-clock-time-fixer&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stylisk&repository=ha-xiaomi-clock-time-fixer-stylisk&category=integration)
 1. Restart Home Assistant.
 
 ### Method 2: Manual Installation
@@ -63,6 +69,7 @@ The action is fully supported by the Home Assistant UI. You can seamlessly confi
 - **Timezone Offset**: Shift the time mathematically (e.g. `9`).
 - **Temperature Unit**: `Celsius` / `Fahrenheit`.
 - **Clock Format**: `12-hour` / `24-hour` (**LYWSD02MMC only** — not supported on LYWSD02).
+- **Connection Timeout**: Per-device maximum seconds for the whole update attempt.
 
 ### YAML Mode Example
 You can easily use this integration in your Automations or Scripts. For example, automatically update your clocks every day at 3 AM:
@@ -79,6 +86,7 @@ action:
         - "A4:C1:XX:XX:XX:XX"
         - "A4:C1:XX:XX:XX:XX"
       tz_offset: 9
+      timeout: 20
       temp_mode: "C"
       clock_mode: "24"
 ```
@@ -94,3 +102,10 @@ The integration makes use of `HomeAssistantError` logic. If an update fails, ver
 
 ## Attributions
 Huge thanks to [h4/lywsd02](https://github.com/h4/lywsd02) for the original reverse-engineering of the Xiaomi LYWSD02 Bluetooth GATT specifications.
+
+## Fork Maintenance
+
+- Local development folder: `/Users/jeong/Dropbox/Repositories/ha-xiaomi-clock-time-fixer-stylisk`
+- GitHub fork: `https://github.com/stylisk/ha-xiaomi-clock-time-fixer-stylisk`
+- Upstream repository: `https://github.com/kkqq9320/ha-xiaomi-clock-time-fixer`
+- Home Assistant domain remains `xiaomi_clock_lywsd02` so existing automations can continue to call `xiaomi_clock_lywsd02.set_time`.

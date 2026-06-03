@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Xiaomi Clock Time Fixer",
+        "title": "Xiaomi Clock Time Fixer (Stylisk Fork)",
         "description": "Do you want to set up the Xiaomi clock time fixer integration?\nThis will register the 'set_time' action."
       }
     },
